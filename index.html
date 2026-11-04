@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>नंबर गेस गेम</title>
+<style>
+  :root {
+    --bg1: #3a1c71;
+    --bg2: #d76d77;
+    --bg3: #ffaf7b;
+    --card: rgba(255, 255, 255, 0.14);
+    --text: #ffffff;
+    --accent: #ffd166;
+    --good: #06d6a0;
+    --bad: #ef476f;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, "Noto Sans Devanagari", sans-serif;
+    color: var(--text);
+    background: linear-gradient(160deg, var(--bg1), var(--bg2) 55%, var(--bg3));
+    background-attachment: fixed;
+    display: flex;
+    justify-content: center;
+    padding: 16px;
+  }
+  .game {
+    width: 100%;
+    max-width: 420px;
+    background: var(--card);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 28px;
+    padding: 22px 18px 26px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    align-self: center;
+  }
+  h1 { margin: 0; text-align: center; font-size: 1.7rem; letter-spacing: .5px; }
+  .sub { text-align: center; opacity: .85; margin: 6px 0 18px; font-size: .95rem; }
+
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 18px; }
+  .stat {
+    background: rgba(0,0,0,0.22);
+    border-radius: 16px;
+    padding: 10px 6px;
+    text-align: center;
+  }
+  .stat span { display: block; font-size: .72rem; opacity: .8; }
+  .stat b { font-size: 1.35rem; color: var(--accent); }
+
+  .range {
+    text-align: center; font-size: .9rem; margin-bottom: 8px; opacity: .95;
+  }
+  .bar {
+    height: 10px; border-radius: 10px; background: rgba(0,0,0,0.25);
+    position: relative; overflow: hidden; margin-bottom: 18px;
+  }
+  .bar i {
+    position: absolute; top: 0; bottom: 0;
+    background: linear-gradient(90deg, var(--accent), var(--good));
+    border-radius: 10px; transition: left .35s, right .35s;
+  }
+
+  .face {
+    font-size: 3.4rem; text-align: center; margin: 4px 0;
+    transition: transform .2s;
+  }
+  .face.pop { animation: pop .35s; }
+  @keyframes pop { 0% { transform: scale(.6); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
+
+  .msg {
+    text-align: center; min-height: 52px; font-size: 1.1rem; font-weight: 600;
+    display: flex; align-items: center; justify-content: center; padding: 0 6px;
+  }
+  .msg.good { color: var(--good); }
+  .msg.bad { color: #ffd1dc; }
+  .shake { animation: shake .4s; }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); } 20% { transform: translateX(-8px); }
+    40% { transform: translateX(8px); } 60% { transform: translateX(-6px); } 80% { transform: translateX(6px); }
+  }
+
+  .input-row { display: flex; gap: 10px; margin: 10px 0 14px; }
+  input[type="number"] {
+    flex: 1; min-width: 0;
+    font-size: 1.6rem; text-align: center; font-weight: 700;
+    padding: 12px; border-radius: 16px; border: 2px solid transparent;
+    background: rgba(255,255,255,0.95); color: #2b2d42; outline: none;
+    -moz-appearance: textfield;
+  }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type="number"]:focus { border-color: var(--accent); }
+  input:disabled { opacity: .6; }
+
+  button {
+    font-family: inherit; font-weight: 700; font-size: 1rem; border: none; cursor: pointer;
+    border-radius: 16px; padding: 14px 18px; color: #2b2d42;
+    transition: transform .1s, opacity .2s;
+  }
+  button:active { transform: scale(.96); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-guess { background: linear-gradient(135deg, #ffd166, #ffb347); }
+  .btn-next { background: linear-gradient(135deg, #06d6a0, #4ee3c1); width: 100%; margin-bottom: 10px; display: none; }
+  .btn-restart { background: rgba(255,255,255,0.9); width: 100%; }
+
+  .history { margin: 6px 0 16px; text-align: center; min-height: 36px; }
+  .history small { display: block; opacity: .75; margin-bottom: 6px; font-size: .78rem; }
+  .chip {
+    display: inline-block; margin: 3px; padding: 5px 11px; border-radius: 20px;
+    font-size: .9rem; font-weight: 700; background: rgba(0,0,0,0.25);
+  }
+  .chip.low { background: rgba(78, 160, 255, .55); }
+  .chip.high { background: rgba(239, 71, 111, .6); }
+  .chip.win { background: var(--good); color: #073b2e; }
+</style>
+</head>
+<body>
+  <main class="game">
+    <h1>🎯 नंबर गेस गेम</h1>
+    <p class="sub">1 से 100 के बीच छुपा नंबर पहचानो!</p>
+
+    <section class="stats">
+      <div class="stat"><span>स्कोर</span><b id="score">0</b></div>
+      <div class="stat"><span>कोशिशें बची</span><b id="left">7</b></div>
+      <div class="stat"><span>बेस्ट स्कोर</span><b id="best">0</b></div>
+    </section>
+
+    <div class="range">सही नंबर <b id="lowTxt">1</b> और <b id="highTxt">100</b> के बीच है</div>
+    <div class="bar"><i id="barFill" style="left:0%; right:0%"></i></div>
+
+    <div class="face" id="face">🤔</div>
+    <div class="msg" id="msg">अपना पहला अनुमान लगाओ!</div>
+
+    <div class="input-row">
+      <input type="number" id="guess" inputmode="numeric" min="1" max="100" placeholder="?" autocomplete="off">
+      <button class="btn-guess" id="guessBtn">अनुमान लगाओ</button>
+    </div>
+
+    <div class="history">
+      <small>तुम्हारे अनुमान</small>
+      <div id="chips"></div>
+    </div>
+
+    <button class="btn-next" id="nextBtn">▶ अगला राउंड</button>
+    <button class="btn-restart" id="restartBtn">🔄 Restart</button>
+  </main>
+
+<script>
+  var MAX_TRIES = 7;
+  var secret, low, high, tries, total, best, over;
+
+  var $ = function (id) { return document.getElementById(id); };
+  var elScore = $('score'), elLeft = $('left'), elBest = $('best');
+  var elLow = $('lowTxt'), elHigh = $('highTxt'), elBar = $('barFill');
+  var elFace = $('face'), elMsg = $('msg'), elInput = $('guess');
+  var elChips = $('chips'), elGuessBtn = $('guessBtn'), elNext = $('nextBtn');
+
+  best = 0;
+  try { best = parseInt(localStorage.getItem('guessBest'), 10) || 0; } catch (e) {}
+  total = 0;
+
+  function say(text, cls, face) {
+    elMsg.textContent = text;
+    elMsg.className = 'msg ' + (cls || '');
+    if (face) {
+      elFace.textContent = face;
+      elFace.classList.remove('pop');
+      void elFace.offsetWidth;
+      elFace.classList.add('pop');
+    }
+  }
+
+  function render() {
+    elScore.textContent = total;
+    elLeft.textContent = MAX_TRIES - tries;
+    elBest.textContent = best;
+    elLow.textContent = low;
+    elHigh.textContent = high;
+    elBar.style.left = ((low - 1) / 99 * 100) + '%';
+    elBar.style.right = ((100 - high) / 99 * 100) + '%';
+  }
+
+  function newRound() {
+    secret = Math.floor(Math.random() * 100) + 1;
+    low = 1; high = 100; tries = 0; over = false;
+    elChips.innerHTML = '';
+    elInput.value = '';
+    elInput.disabled = false;
+    elGuessBtn.disabled = false;
+    elNext.style.display = 'none';
+    say('अपना पहला अनुमान लगाओ!', '', '🤔');
+    render();
+    elInput.focus();
+  }
+
+  function addChip(n, cls) {
+    var s = document.createElement('span');
+    s.className = 'chip ' + cls;
+    s.textContent = n;
+    elChips.appendChild(s);
+  }
+
+  function endRound() {
+    over = true;
+    elInput.disabled = true;
+    elGuessBtn.disabled = true;
+    elNext.style.display = 'block';
+    if (total > best) {
+      best = total;
+      try { localStorage.setItem('guessBest', String(best)); } catch (e) {}
+    }
+    render();
+  }
+
+  function guess() {
+    if (over) return;
+    var raw = elInput.value.trim();
+    var n = Number(raw);
+    if (raw === '' || !Number.isInteger(n) || n < 1 || n > 100) {
+      say('कृपया 1 से 100 के बीच सही नंबर डालो', 'bad', '😅');
+      elMsg.classList.remove('shake'); void elMsg.offsetWidth; elMsg.classList.add('shake');
+      return;
+    }
+    tries++;
+
+    if (n === secret) {
+      var pts = Math.max(100 - (tries - 1) * 12, 10);
+      total += pts;
+      addChip(n, 'win');
+      say('🎉 शानदार! ' + tries + ' कोशिश में सही! +' + pts + ' अंक', 'good', '🥳');
+      endRound();
+      return;
+    }
+
+    if (n < secret) {
+      low = Math.max(low, n + 1);
+      addChip(n, 'low');
+      say('⬆️ थोड़ा और बड़ा नंबर सोचो', 'bad', '🙂');
+    } else {
+      high = Math.min(high, n - 1);
+      addChip(n, 'high');
+      say('⬇️ थोड़ा और छोटा नंबर सोचो', 'bad', '🙂');
+    }
+
+    if (tries >= MAX_TRIES) {
+      say('😢 कोशिशें खत्म! सही नंबर था ' + secret, 'bad', '😢');
+      endRound();
+      return;
+    }
+
+    elInput.value = '';
+    elInput.focus();
+    render();
+  }
+
+  function restart() {
+    total = 0;
+    newRound();
+  }
+
+  elGuessBtn.addEventListener('click', guess);
+  elInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') guess(); });
+  elNext.addEventListener('click', newRound);
+  $('restartBtn').addEventListener('click', restart);
+
+  newRound();
+</script>
+</body>
+</html>
